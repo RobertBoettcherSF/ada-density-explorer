@@ -1,0 +1,1285 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#f3efe6">
+  <title>ADA Density Explorer</title>
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3E%3Crect width='16' height='16' rx='3' fill='%230e6a64'/%3E%3C/svg%3E">
+  <style>
+    :root {
+      --paper: #f3efe6;
+      --card: #fffdf8;
+      --ink: #1c2430;
+      --muted: #5c6770;
+      --line: #e0d4c2;
+      --teal: #0e6a64;
+      --teal-deep: #083f3c;
+      --gold: #8d6416;
+      --sink: #8b3030;
+      --good: #1d6b45;
+      --shadow: 0 12px 32px rgba(48, 36, 16, 0.06);
+    }
+    * { box-sizing: border-box; }
+    html { scroll-behavior: smooth; }
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        radial-gradient(900px 280px at 0% -10%, #fff 0%, transparent 55%),
+        var(--paper);
+      font: 17px/1.5 "Segoe UI", system-ui, sans-serif;
+      padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+    h1, h2, h3 { font-family: Georgia, "Iowan Old Style", Palatino, serif; font-weight: 600; line-height: 1.15; }
+    h1 { font-size: clamp(1.8rem, 4vw, 2.5rem); margin: 0 0 0.4rem; }
+    h2 { font-size: 1.7rem; margin: 0.15rem 0 0.4rem; }
+    h3 { font-size: 1.15rem; margin: 0 0 0.4rem; }
+    p { margin: 0.4rem 0; }
+    button, input, select { font: inherit; color: inherit; }
+    button { cursor: pointer; }
+    :focus-visible { outline: 3px solid var(--teal); outline-offset: 2px; }
+    .wrap { max-width: 1040px; margin: 0 auto; padding: 1.25rem 1rem 3rem; }
+    header.top { margin-bottom: 0.8rem; }
+    .lede { font-size: 1.05rem; max-width: 42rem; }
+    .status { color: var(--muted); font-size: 0.92rem; }
+    .tabs {
+      position: sticky;
+      top: 0;
+      z-index: 3;
+      display: flex;
+      gap: 0.4rem;
+      overflow-x: auto;
+      padding: 0.45rem 0 0.7rem;
+      background: rgba(243, 239, 230, 0.94);
+      backdrop-filter: blur(8px);
+    }
+    .tabs button {
+      flex: 0 0 auto;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      background: var(--card);
+      border-radius: 999px;
+      padding: 0.4rem 0.9rem;
+    }
+    .tabs button[aria-selected="true"] {
+      background: var(--teal);
+      border-color: var(--teal);
+      color: #fff;
+    }
+    .panel { margin-top: 0.4rem; }
+    .panel[hidden] { display: none; }
+    .kicker {
+      margin: 0;
+      color: var(--teal);
+      font-size: 0.75rem;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+    }
+    .layout {
+      display: grid;
+      gap: 1rem;
+      margin-top: 0.8rem;
+    }
+    @media (min-width: 900px) {
+      .layout { grid-template-columns: minmax(0, 1.08fr) minmax(280px, 0.92fr); align-items: start; }
+    }
+    .card, .stage {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: 16px;
+      box-shadow: var(--shadow);
+      padding: 0.9rem;
+    }
+    .stage svg { display: block; width: 100%; height: auto; }
+    .choices, .tries { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+    .tries { margin: 0.35rem 0 0.2rem; }
+    .choices button, .tries button, .swap {
+      min-height: 44px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 10px;
+      padding: 0.35rem 0.7rem;
+    }
+    .choices button { flex: 1 1 9.2rem; text-align: left; }
+    .choices button[aria-pressed="true"] {
+      background: var(--ink);
+      color: #fff;
+      border-color: var(--ink);
+    }
+    .slider { display: block; margin: 0.75rem 0; }
+    .slider-top, .pair {
+      display: flex;
+      justify-content: space-between;
+      gap: 0.75rem;
+      align-items: baseline;
+    }
+    output, .num { font-variant-numeric: tabular-nums; }
+    input[type="range"] { width: 100%; accent-color: var(--teal); height: 28px; }
+    select {
+      width: 100%;
+      min-height: 44px;
+      font-size: 16px;
+      border: 1px solid var(--line);
+      border-radius: 10px;
+      background: #fff;
+      padding: 0.3rem 0.5rem;
+    }
+    .formula {
+      background: #f7f3ea;
+      border: 1px solid var(--line);
+      border-radius: 12px;
+      padding: 0.75rem 0.9rem;
+      margin-top: 0.6rem;
+      overflow-wrap: anywhere;
+    }
+    .formula p { margin: 0.28rem 0; }
+    .note { color: var(--muted); font-size: 0.92rem; }
+    .story {
+      margin: 0.9rem 0 0;
+      padding: 0.85rem 1rem;
+      background: #e5f2ef;
+      border-radius: 12px;
+    }
+    .caption { color: var(--muted); font-size: 0.92rem; margin: 0.4rem 0 0; }
+    .scale-ends {
+      display: flex;
+      justify-content: space-between;
+      color: var(--muted);
+      font-size: 0.82rem;
+    }
+    .ladder {
+      position: relative;
+      height: 28rem;
+      margin: 0.4rem 0 0.2rem 0.2rem;
+    }
+    .ladder-line {
+      position: absolute;
+      left: 0.55rem;
+      top: 0.4rem;
+      bottom: 0.4rem;
+      width: 3px;
+      background: var(--ink);
+      border-radius: 2px;
+    }
+    .marker {
+      position: absolute;
+      left: 0;
+      width: 1.15rem;
+      height: 1.15rem;
+      margin-top: -0.55rem;
+      border-radius: 50%;
+      background: var(--teal);
+      border: 2px solid #fff;
+      box-shadow: 0 0 0 1px var(--teal);
+      z-index: 2;
+      transition: top 0.35s ease;
+    }
+    .tick {
+      position: absolute;
+      left: 0.28rem;
+      width: 0.7rem;
+      height: 3px;
+      margin-top: -1px;
+      background: var(--ink);
+      border-radius: 2px;
+    }
+    .rung {
+      position: absolute;
+      left: 1.7rem;
+      right: 0;
+      transform: translateY(-50%);
+      display: flex;
+      justify-content: space-between;
+      gap: 0.5rem;
+      min-height: 40px;
+      border: 0;
+      background: transparent;
+      text-align: left;
+      padding: 0.2rem 0.3rem;
+      border-radius: 8px;
+      transition: top 0.35s ease, opacity 0.35s ease;
+    }
+    .rung[aria-current="true"] { background: #e5f2ef; }
+    .rung b { font-weight: 600; }
+    #pack-dots circle { transition: cx 0.35s ease, cy 0.35s ease, fill 0.25s ease; }
+    .minis { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-top: 0.7rem; }
+    .mini {
+      flex: 1 1 6.2rem;
+      min-height: 44px;
+      border: 1px solid var(--line);
+      background: #fff;
+      border-radius: 10px;
+      padding: 0.35rem;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.15rem;
+    }
+    .mini .swatch { width: 100%; height: 28px; border-radius: 6px; border: 1px solid rgba(28, 36, 48, 0.25); }
+    .mini small { color: var(--muted); }
+    .mini[data-side="L"], .mini[data-side="R"] { border-width: 2px; }
+    .mini[data-side="L"] { border-color: var(--gold); }
+    .mini[data-side="R"] { border-color: var(--teal); }
+    .wonder {
+      margin-top: 1.1rem;
+      padding: 1rem 1.05rem 1.1rem;
+      background: #fbf6ea;
+      border: 1px dashed #c6a15a;
+      border-radius: 14px;
+    }
+    .badge {
+      display: inline-block;
+      font-size: 0.75rem;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--gold);
+      border: 1px solid #e0c48a;
+      border-radius: 999px;
+      padding: 0.1rem 0.5rem;
+    }
+    .nu { animation: cross 3.6s linear infinite; }
+    @keyframes cross {
+      0% { transform: translateX(-24px); opacity: 0; }
+      12% { opacity: 0.9; }
+      88% { opacity: 0.9; }
+      100% { transform: translateX(210px); opacity: 0; }
+    }
+    details { margin-top: 1.4rem; }
+    summary { cursor: pointer; min-height: 44px; display: flex; align-items: center; }
+    footer { color: var(--muted); font-size: 0.92rem; margin-top: 1rem; }
+    @media (max-width: 700px) {
+      .ladder { height: 24rem; }
+    }
+    @media (prefers-reduced-motion: reduce) {
+      *, *::before, *::after {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <header class="top">
+      <p class="kicker">Plain Ada · WebAssembly</p>
+      <h1>ADA Density Explorer</h1>
+      <p class="lede">Density is mass divided by volume. Drag a slider and watch the picture move with the numbers. The arithmetic on this page is done by Ada.</p>
+      <p class="status" id="status">Loading the Ada module…</p>
+    </header>
+
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button type="button" role="tab" id="tab-float" aria-controls="float" aria-selected="true">Float tank</button>
+      <button type="button" role="tab" id="tab-pack" aria-controls="pack" aria-selected="false">Pack the box</button>
+      <button type="button" role="tab" id="tab-balance" aria-controls="balance" aria-selected="false">Same size</button>
+      <button type="button" role="tab" id="tab-ladder" aria-controls="ladder" aria-selected="false">Ladder</button>
+      <button type="button" role="tab" id="tab-empty" aria-controls="empty" aria-selected="false">Mostly empty</button>
+      <button type="button" role="tab" id="tab-imagine" aria-controls="imagine" aria-selected="false">Imagine</button>
+    </nav>
+
+    <section class="panel" id="float" role="tabpanel" aria-labelledby="tab-float">
+      <p class="kicker">1 · Float or sink</p>
+      <h2>Float tank</h2>
+      <p>A block settles when the fluid it pushes aside weighs the same as it does. If that never happens, it rests on the bottom.</p>
+      <div class="layout">
+        <div class="card">
+          <p class="label">Material</p>
+          <div class="choices" id="material-buttons"></div>
+          <p class="label">Fluid</p>
+          <div class="choices" id="fluid-buttons"></div>
+          <p class="label">Try a pair</p>
+          <div class="tries" id="tries">
+            <button type="button" data-mat="3" data-fluid="3">Ice in fresh water</button>
+            <button type="button" data-mat="3" data-fluid="1">Ice in ethanol</button>
+            <button type="button" data-mat="6" data-fluid="6">Iron in mercury</button>
+            <button type="button" data-mat="8" data-fluid="6">Gold in mercury</button>
+            <button type="button" data-mat="1" data-fluid="5">Cork in honey</button>
+          </div>
+          <label class="slider" for="float-volume">
+            <span class="slider-top"><span>Volume</span><output id="float-volume-out">—</output></span>
+            <input id="float-volume" type="range" min="0.0002" max="0.003" step="any" value="0.001">
+          </label>
+          <label class="slider" for="float-mass">
+            <span class="slider-top"><span>Mass, if you set it yourself</span><output id="float-mass-out">—</output></span>
+            <input id="float-mass" type="range" min="0.02" max="400" step="any" value="0.917">
+          </label>
+          <p class="note">Move the mass slider to leave the preset. The density is then mass divided by volume.</p>
+          <label class="slider" for="float-fluid">
+            <span class="slider-top"><span>Fluid density</span><output id="float-fluid-out">—</output></span>
+            <input id="float-fluid" type="range" min="0" max="1000" step="any" value="500">
+          </label>
+          <div class="formula" id="float-formula"></div>
+        </div>
+        <div class="stage">
+          <svg id="float-svg" viewBox="0 0 360 340" aria-hidden="true">
+            <rect x="78" y="36" width="184" height="280" rx="10" fill="#f7f4ee" stroke="#1c2430" stroke-width="3"/>
+            <rect id="float-fluid" x="86" y="150" width="168" height="158" fill="#8ecae6"/>
+            <line x1="78" y1="150" x2="262" y2="150" stroke="#1c2430" stroke-width="2"/>
+            <line x1="90" y1="308" x2="250" y2="308" stroke="#1c2430" stroke-width="2"/>
+            <g id="float-block">
+              <rect id="float-block-rect" x="0" y="0" width="70" height="70" rx="6" stroke="#1c2430" stroke-width="2"/>
+              <line id="float-cut" x1="0" y1="0" x2="70" y2="0" stroke="#1c2430" stroke-width="2" stroke-dasharray="4 3" visibility="hidden"/>
+            </g>
+            <line id="float-weight" x1="300" y1="150" x2="300" y2="210" stroke="#8b3030" stroke-width="4" stroke-linecap="round"/>
+            <line id="float-buoy" x1="324" y1="150" x2="324" y2="90" stroke="#0e6a64" stroke-width="4" stroke-linecap="round"/>
+            <text id="float-weight-label" x="292" y="228" font-size="11" fill="#8b3030">weight</text>
+            <text id="float-buoy-label" x="292" y="78" font-size="11" fill="#0e6a64">buoyancy</text>
+          </svg>
+          <p class="caption" id="float-caption"></p>
+        </div>
+      </div>
+      <p class="story" id="float-story" aria-live="polite">Loading the Ada module…</p>
+    </section>
+
+    <section class="panel" id="pack" role="tabpanel" aria-labelledby="tab-pack" hidden>
+      <p class="kicker">2 · Packing is not weight</p>
+      <h2>Pack the box</h2>
+      <p>Density goes up if you add more pieces, or if each piece gets heavier, or if the box shrinks. Only the first and the third change how tightly the dots are packed.</p>
+      <div class="layout">
+        <div class="card">
+          <label class="slider" for="pack-count">
+            <span class="slider-top"><span>Number of particles</span><output id="pack-count-out">—</output></span>
+            <input id="pack-count" type="range" min="1" max="160" step="1" value="27">
+          </label>
+          <label class="slider" for="pack-mass">
+            <span class="slider-top"><span>Mass of one particle</span><output id="pack-mass-out">—</output></span>
+            <input id="pack-mass" type="range" min="0" max="1000" step="any" value="500">
+          </label>
+          <label class="slider" for="pack-side">
+            <span class="slider-top"><span>Box side</span><output id="pack-side-out">—</output></span>
+            <input id="pack-side" type="range" min="0.25" max="2" step="any" value="1">
+          </label>
+          <div class="formula" id="pack-formula"></div>
+        </div>
+        <div class="stage">
+          <svg id="pack-svg" viewBox="0 0 360 300" aria-hidden="true">
+            <rect id="pack-box" x="40" y="40" width="220" height="220" rx="8" fill="#f7f4ee" stroke="#1c2430" stroke-width="3"/>
+            <g id="pack-dots"></g>
+            <rect x="292" y="36" width="28" height="220" rx="8" fill="#f7f4ee" stroke="#1c2430" stroke-width="2"/>
+            <rect id="pack-bar" x="296" y="200" width="20" height="48" rx="4" fill="#5c5348"/>
+            <text x="306" y="276" text-anchor="middle" font-size="11" fill="#1c2430">mass</text>
+          </svg>
+          <p class="caption">Dots show the packing. The bar is the mass of one particle. The bar can grow while the dots stay put.</p>
+        </div>
+      </div>
+      <p class="story" id="pack-story" aria-live="polite"></p>
+    </section>
+
+    <section class="panel" id="balance" role="tabpanel" aria-labelledby="tab-balance" hidden>
+      <p class="kicker">3 · Equal volume</p>
+      <h2>Same size, different weight</h2>
+      <p>Every cube has the same volume. The balance tips toward the greater mass. Changing the volume scales every cube together.</p>
+      <div class="layout">
+        <div class="card">
+          <label class="slider" for="bal-left">Left-hand cube
+            <select id="bal-left"></select>
+          </label>
+          <label class="slider" for="bal-right">Right-hand cube
+            <select id="bal-right"></select>
+          </label>
+          <button type="button" class="swap" id="bal-swap">Swap sides</button>
+          <label class="slider" for="bal-volume">
+            <span class="slider-top"><span>Volume of each cube</span><output id="bal-volume-out">—</output></span>
+            <input id="bal-volume" type="range" min="0.0002" max="0.003" step="any" value="0.001">
+          </label>
+          <div class="formula" id="bal-formula"></div>
+        </div>
+        <div class="stage">
+          <svg id="bal-svg" viewBox="-10 -40 380 280" aria-hidden="true">
+            <polygon points="180,92 164,188 196,188" fill="#1c2430"/>
+            <line id="bal-beam" x1="60" y1="92" x2="300" y2="92" stroke="#1c2430" stroke-width="6" stroke-linecap="round"/>
+            <rect id="bal-left-cube" rx="4" stroke="#1c2430" stroke-width="2"/>
+            <rect id="bal-right-cube" rx="4" stroke="#1c2430" stroke-width="2"/>
+            <text id="bal-left-label" text-anchor="middle" font-size="13" fill="#1c2430"></text>
+            <text id="bal-right-label" text-anchor="middle" font-size="13" fill="#1c2430"></text>
+          </svg>
+          <div class="minis" id="bal-minis"></div>
+          <p class="caption">Tap a small cube to put it on the right. Gold border is left, teal border is right. The squares stay the same size.</p>
+        </div>
+      </div>
+      <p class="story" id="bal-story" aria-live="polite"></p>
+    </section>
+
+    <section class="panel" id="ladder" role="tabpanel" aria-labelledby="tab-ladder" hidden>
+      <p class="kicker">4 · Many decades</p>
+      <h2>Density ladder</h2>
+      <p>The scale is logarithmic: each step of one is a factor of ten. A metric teaspoon is 5 mL everywhere on the ladder. Only the density changes, so the mass in that spoon changes.</p>
+      <div class="layout">
+        <div class="card">
+          <label class="slider" for="ladder-pos">
+            <span class="slider-top"><span>Where you are</span><output id="ladder-pos-out">—</output></span>
+            <input id="ladder-pos" type="range" min="-21" max="18" step="any" value="3">
+          </label>
+          <label class="slider" for="ladder-zoom">
+            <span class="slider-top"><span>Decades visible</span><output id="ladder-zoom-out">—</output></span>
+            <input id="ladder-zoom" type="range" min="2" max="40" step="0.1" value="40">
+          </label>
+          <div class="formula" id="ladder-formula"></div>
+          <p class="note">Comparison masses are everyday round figures, except the proton, a 16-pound bowling ball, the Earth and the Sun. White-dwarf and neutron-star rungs are orders of magnitude. Interstellar space here is about one hydrogen atom per cubic centimetre.</p>
+        </div>
+        <div class="stage">
+          <div class="ladder" id="ladder-view">
+            <div class="ladder-line"></div>
+            <div class="marker" id="ladder-marker"></div>
+          </div>
+          <p class="caption" id="ladder-window"></p>
+          <p class="caption">Ticks mark the true place on the log line. Labels step apart when those places would sit on top of each other.</p>
+        </div>
+      </div>
+      <p class="story" id="ladder-story" aria-live="polite"></p>
+    </section>
+
+    <section class="panel" id="empty" role="tabpanel" aria-labelledby="tab-empty" hidden>
+      <p class="kicker">5 · Inside the atom</p>
+      <h2>Mostly empty</h2>
+      <p>A solid block looks full. Nearly all of its mass sits in nuclei. The picture uses the Bohr radius and the proton charge radius. An atom has no hard shell; this is a size comparison, not a drawing of an orbit.</p>
+      <div class="layout">
+        <div class="card">
+          <label class="slider" for="empty-zoom">
+            <span class="slider-top"><span>Zoom</span><output id="empty-zoom-out">—</output></span>
+            <input id="empty-zoom" type="range" min="0" max="1" step="any" value="0">
+          </label>
+          <div class="scale-ends"><span>Object</span><span>Atoms</span><span>Nucleus</span></div>
+          <div class="formula" id="empty-formula"></div>
+          <p class="note">Nuclear density is 2.8×10¹⁷ kg/m³, the usual saturation density near 0.16 nucleons per fm³. The everyday density in the ratio is water. Both the Bohr radius and the proton radius are standard measured scales. The Earth mass and radius are the usual 5.9722×10²⁴ kg and 6371 km.</p>
+        </div>
+        <div class="stage">
+          <svg id="empty-svg" viewBox="0 0 320 300" aria-hidden="true">
+            <g id="empty-object">
+              <rect x="90" y="70" width="140" height="140" rx="14" fill="#8e979e" stroke="#1c2430" stroke-width="3"/>
+            </g>
+            <g id="empty-atoms"></g>
+            <g id="empty-nucleus">
+              <circle id="empty-cloud" cx="160" cy="150" r="78" fill="none" stroke="#8ecae6" stroke-width="3" stroke-dasharray="6 6"/>
+              <circle id="empty-dot" cx="160" cy="150" r="2" fill="#0e6a64" stroke="#1c2430" stroke-width="1"/>
+            </g>
+          </svg>
+          <p class="caption" id="empty-caption"></p>
+        </div>
+      </div>
+      <p class="story" id="empty-story" aria-live="polite"></p>
+    </section>
+
+    <section class="panel" id="imagine" role="tabpanel" aria-labelledby="tab-imagine" hidden>
+      <p class="kicker">6 · Thought experiment</p>
+      <h2>Imagine…</h2>
+      <p><span class="badge">Not the same kind of measurement</span></p>
+      <p>The numbers in this section are order-of-magnitude figures, and they are approximate. They are here so the last question has something concrete beside it. They are not a claim about consciousness, and the question is not a result.</p>
+      <div class="layout">
+        <div class="card">
+          <h3>Neutrinos</h3>
+          <p class="note">Solar neutrinos at Earth are taken as 6.5×10¹⁰ per cm² per second, a round total in the neighbourhood of the standard solar model. The chance of an interaction on a trip through the Earth uses a sketch cross section of 10⁻⁴⁴ cm² and the nucleons along an Earth diameter. A different energy, or a different target, moves this by a large factor.</p>
+          <div class="tries" id="area-chips">
+            <button type="button" data-area="1">Thumbnail, 1 cm²</button>
+            <button type="button" data-area="150">Palm, 150 cm²</button>
+            <button type="button" data-area="3000">Chest, 3000 cm²</button>
+          </div>
+          <label class="slider" for="imagine-area">
+            <span class="slider-top"><span>Area</span><output id="imagine-area-out">—</output></span>
+            <input id="imagine-area" type="range" min="0" max="1000" step="any" value="0">
+          </label>
+          <h3>Dark matter, as astronomers sketch it</h3>
+          <p class="note">The usual local-halo estimate is about 0.3 GeV/cm³. Direct searches have not identified what it is. Nothing here treats that estimate as a weighed sample.</p>
+          <div class="tries" id="dark-chips">
+            <button type="button" data-vol="0.00001">Thimble, 10 mL</button>
+            <button type="button" data-vol="0.00025">Cup, 250 mL</button>
+            <button type="button" data-vol="30">Room, 30 m³</button>
+          </div>
+          <label class="slider" for="imagine-volume">
+            <span class="slider-top"><span>Volume of ordinary “empty” space</span><output id="imagine-volume-out">—</output></span>
+            <input id="imagine-volume" type="range" min="0" max="1000" step="any" value="400">
+          </label>
+          <div class="formula" id="imagine-formula"></div>
+        </div>
+        <div class="stage">
+          <svg viewBox="0 0 320 210" aria-hidden="true">
+            <circle cx="78" cy="48" r="16" fill="none" stroke="#1c2430" stroke-width="2"/>
+            <rect x="62" y="68" width="32" height="52" rx="12" fill="none" stroke="#1c2430" stroke-width="2"/>
+            <rect id="imagine-area-rect" x="66" y="78" width="18" height="22" fill="#0e6a64" opacity="0.35"/>
+            <g fill="#0e6a64">
+              <circle class="nu" cx="20" cy="78" r="2.2" style="animation-delay: 0s"/>
+              <circle class="nu" cx="20" cy="96" r="2.2" style="animation-delay: .6s"/>
+              <circle class="nu" cx="20" cy="114" r="2.2" style="animation-delay: 1.2s"/>
+              <circle class="nu" cx="20" cy="88" r="2.2" style="animation-delay: 1.8s"/>
+              <circle class="nu" cx="20" cy="106" r="2.2" style="animation-delay: 2.4s"/>
+            </g>
+            <circle cx="230" cy="100" r="58" fill="#d7e6ea" stroke="#1c2430" stroke-width="2"/>
+            <line x1="172" y1="100" x2="288" y2="100" stroke="#0e6a64" stroke-width="2" stroke-dasharray="4 4"/>
+            <text x="230" y="176" text-anchor="middle" font-size="12" fill="#1c2430">through the Earth</text>
+          </svg>
+          <p class="caption">The dots are a picture of a stream, not one dot per neutrino. The dashed line is a path across the Earth.</p>
+        </div>
+      </div>
+      <p class="story" id="imagine-story" aria-live="polite"></p>
+      <div class="wonder">
+        <p class="badge">A question, not a result</p>
+        <h3>Could there be life we miss because we are dense?</h3>
+        <p>Some people who describe a near-death experience speak of a living presence that was vivid to them and easy to miss from ordinary waking life. Nothing on this page tests those accounts.</p>
+        <p>What the figures do show is narrower. Neutrinos already pass through a person who feels nothing. The dark-matter sketch, if it is right, says a kind of mass can share our space without sharing the way atoms touch. Our own matter is, by comparison, tightly packed and strongly interacting.</p>
+        <p>Could there be life that moves through our world as lightly as a neutrino moves through the Earth — life we do not perceive because we are, comparatively, dense? That is a question to wonder about. It is not a claim this explorer can weigh.</p>
+      </div>
+    </section>
+
+    <details>
+      <summary>Sources for the constants</summary>
+      <ul>
+        <li>Standard gravity 9.80665 m/s², the conventional value.</li>
+        <li>Pure metals at room temperature, from standard physical tables: aluminium 2.70, iron 7.874, lead 11.34, gold 19.32, osmium 22.59 g/cm³.</li>
+        <li>Ice 917 kg/m³ and fresh water 1000 kg/m³ are the conventional teaching values. Ice Ih near 0 °C is about 917. Liquid water near 4 °C is 999.97.</li>
+        <li>Ethanol 789 kg/m³ is about 789.3 at 20 °C. Mercury 13534 kg/m³ is about 13.534 g/cm³ near 25 °C.</li>
+        <li>Sea water 1025, olive oil 910, honey 1420, cork 240, pine 500 and granite 2700 are typical values. They vary.</li>
+        <li>Air 1.225 kg/m³ is the International Standard Atmosphere at sea level.</li>
+        <li>Interstellar space on the ladder is one proton mass per cm³, an order of magnitude. A white dwarf is shown as 10⁹ kg/m³, also an order of magnitude.</li>
+        <li>Nuclear density 2.8×10¹⁷ kg/m³ is the usual saturation density. The Bohr radius is the CODATA value. The proton radius 0.8414 fm is the CODATA 2018 charge radius.</li>
+        <li>Earth: 5.9722×10²⁴ kg and a volumetric mean radius of 6371 km. Sun: 1.9885×10³⁰ kg.</li>
+        <li>Neutrino flux 6.5×10¹⁰ cm⁻² s⁻¹ and cross section 10⁻⁴⁴ cm² are an order-of-magnitude solar-neutrino sketch. Local dark matter is the usual 0.3 GeV/cm³ halo estimate.</li>
+      </ul>
+    </details>
+    <footer>
+      <p>Toolchain: AdaWebPack 24.0.0, GNAT-LLVM, linked with LLVM 16 wasm-ld. Rebuild with <code>bash tools/build.sh</code>. The live page is <a href="https://raw.githack.com/RobertBoettcherSF/ada-density-explorer/main/index.html">raw.githack.com/RobertBoettcherSF/ada-density-explorer/main/index.html</a>.</p>
+    </footer>
+  </div>
+  <noscript><p>This page needs JavaScript to load the Ada module and to draw. The calculations live in that module.</p></noscript>
+  <script>
+    const OP = { MAT: 1, FLU: 2, FLOAT: 3, PACK: 4, MASSES: 5, BAL: 6, RUNG: 7, LADDER: 8, EMPTY: 9, IMAGINE: 10, COUNTS: 11, MAP: 12, UNMAP: 13 };
+    const PANELS = ["float", "pack", "balance", "ladder", "empty", "imagine"];
+    const MATERIAL_META = [
+      ["Cork", "typical composition cork", "#c4a574"],
+      ["Pine", "typical softwood", "#e0b56a"],
+      ["Ice", "near 0 °C", "#d7f1f6"],
+      ["Water", "conventional", "#8ecae6"],
+      ["Aluminium", "pure metal", "#d5dde3"],
+      ["Iron", "pure metal", "#8e979e"],
+      ["Lead", "pure metal", "#5e6770"],
+      ["Gold", "pure metal", "#e0b323"]
+    ];
+    const FLUID_META = [
+      ["Ethanol", "about 20 °C", "#eadcf4"],
+      ["Oil", "typical olive oil", "#f0d78a"],
+      ["Fresh water", "conventional", "#8ecae6"],
+      ["Sea water", "typical surface ocean", "#3d7ea6"],
+      ["Honey", "typical", "#e0a04a"],
+      ["Mercury", "near 25 °C", "#c5cdd4"]
+    ];
+    const RUNG_META = [
+      ["Interstellar space", "about 1 atom per cm³"],
+      ["Air", "sea-level atmosphere"],
+      ["Water", "conventional"],
+      ["Rock", "typical granite"],
+      ["Lead", "pure metal"],
+      ["Osmium", "densest stable element"],
+      ["White dwarf", "order of magnitude"],
+      ["Neutron star", "nuclear density, approximate"]
+    ];
+    const ANCHORS = [
+      ["proton", "protons"],
+      ["grain of sand", "grains of sand"],
+      ["grain of rice", "grains of rice"],
+      ["paperclip", "paperclips"],
+      ["large egg", "large eggs"],
+      ["apple", "apples"],
+      ["litre of water", "litres of water"],
+      ["bowling ball", "bowling balls"],
+      ["adult", "adults"],
+      ["small car", "small cars"],
+      ["elephant", "elephants"],
+      ["blue whale", "blue whales"],
+      ["Eiffel Tower", "Eiffel Towers"],
+      ["Great Pyramid", "Great Pyramids"],
+      ["Earth", "Earths"],
+      ["Sun", "Suns"]
+    ];
+    const SVGNS = "http://www.w3.org/2000/svg";
+    const reduceMotion = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const $ = (id) => document.getElementById(id);
+
+    const state = {
+      material: 3,
+      fluid: 3,
+      fluidDensity: 1000,
+      packCause: "count",
+      left: 2,
+      right: 8,
+      area: 1,
+      dark: 2.5e-4
+    };
+    let ex = null;
+    let gravity = 9.80665;
+    let materials = [];
+    let fluids = [];
+    let maxSide = 0.27;
+    const floatAnim = { v: null, raf: 0 };
+    const tiltAnim = { v: null, raf: 0 };
+
+    function fixed(n, digits) {
+      if (!Number.isFinite(n)) return "—";
+      return n.toLocaleString("en-GB", {
+        minimumFractionDigits: digits,
+        maximumFractionDigits: digits
+      });
+    }
+    function superscript(exp) {
+      const map = { "-": "⁻", 0: "⁰", 1: "¹", 2: "²", 3: "³", 4: "⁴", 5: "⁵", 6: "⁶", 7: "⁷", 8: "⁸", 9: "⁹" };
+      return String(exp).replace("-", "−").replace(/−/g, "⁻").replace(/\d/g, (d) => map[d]);
+    }
+    function sci(a) {
+      const exp = Math.floor(Math.log10(a));
+      const mant = (a / 10 ** exp).toFixed(3).replace(/(\.\d*?)0+$/, "$1").replace(/\.$/, "");
+      return mant + " × 10" + superscript(exp);
+    }
+    function fmt(n, sig = 4) {
+      if (!Number.isFinite(n)) return "—";
+      const sign = n < 0 ? "−" : "";
+      const a = Math.abs(n);
+      if (a === 0) return "0";
+      if (a >= 1e6 || a < 1e-3) return sign + sci(a);
+      if (Math.abs(a - Math.round(a)) <= a * 1e-8 && a >= 1) {
+        return sign + Math.round(a).toLocaleString("en-GB");
+      }
+      const digits = Math.max(0, sig - Math.floor(Math.log10(a)) - 1);
+      const cut = Number(a.toFixed(Math.min(8, digits)));
+      return sign + cut.toLocaleString("en-GB", { maximumSignificantDigits: sig });
+    }
+    function article(word) {
+      return /^[aeiou]/i.test(word) ? "an" : "a";
+    }
+    function anchorPhrase(count, index) {
+      const pair = ANCHORS[index - 1] || ["object", "objects"];
+      if (count >= 0.995 && count <= 1.005) return "as much as one " + pair[0];
+      if (count >= 1) {
+        const shown = count >= 10 ? fmt(count, 3) : fixed(count, Math.abs(count - Math.round(count)) < 0.05 ? 0 : 1);
+        return "as much as " + shown + " " + pair[1];
+      }
+      return "as much as " + fixed(count, 2) + " of " + article(pair[0]) + " " + pair[0];
+    }
+    function lines(el, rows) {
+      el.replaceChildren();
+      rows.forEach((row) => {
+        const p = document.createElement("p");
+        p.textContent = row;
+        el.appendChild(p);
+      });
+    }
+    function run(op, a = 0, b = 0, c = 0, d = 0) {
+      const status = ex.density_run(op, a, b, c, d);
+      const n = ex.density_count();
+      const out = [];
+      for (let i = 1; i <= n; i += 1) out.push(ex.density_out(i));
+      if (status !== 0) throw new Error("Ada returned status " + status + " for operation " + op);
+      return out;
+    }
+    function glide(slot, target, ms, apply) {
+      if (slot.raf) cancelAnimationFrame(slot.raf);
+      const from = slot.v == null ? target : slot.v;
+      if (reduceMotion || from === target) {
+        slot.v = target;
+        apply(target);
+        return;
+      }
+      const t0 = performance.now();
+      const step = (now) => {
+        const t = Math.min(1, (now - t0) / ms);
+        const e = 1 - (1 - t) * (1 - t);
+        slot.v = from + (target - from) * e;
+        apply(slot.v);
+        if (t < 1) slot.raf = requestAnimationFrame(step);
+      };
+      slot.raf = requestAnimationFrame(step);
+    }
+    function setIfIdle(el, value) {
+      if (document.activeElement === el) return;
+      el.value = String(value);
+    }
+    function show(id) {
+      PANELS.forEach((name) => {
+        const on = name === id;
+        $(name).hidden = !on;
+        $("tab-" + name).setAttribute("aria-selected", on ? "true" : "false");
+      });
+      if (location.hash !== "#" + id) history.replaceState(null, "", "#" + id);
+    }
+
+    function materialName() {
+      return state.material ? materials[state.material - 1].name : "This block";
+    }
+    function fluidName() {
+      return state.fluid ? fluids[state.fluid - 1].name.toLowerCase() : "this fluid";
+    }
+    function paintChoices() {
+      document.querySelectorAll("#material-buttons button").forEach((btn) => {
+        btn.setAttribute("aria-pressed", Number(btn.dataset.index) === state.material ? "true" : "false");
+      });
+      document.querySelectorAll("#fluid-buttons button").forEach((btn) => {
+        btn.setAttribute("aria-pressed", Number(btn.dataset.index) === state.fluid ? "true" : "false");
+      });
+    }
+    function renderFloat() {
+      const volume = Number($("float-volume").value);
+      const mass = Number($("float-mass").value);
+      const out = run(OP.FLOAT, state.material, mass, volume, state.fluidDensity);
+      const density = out[0];
+      const fluid = out[1];
+      const massKg = out[2];
+      const vol = out[3];
+      const weight = out[4];
+      const buoyant = out[5];
+      const apparent = out[6];
+      const submerged = out[7];
+      const ratio = out[8];
+      const code = out[9];
+      const displaced = out[10];
+      const litres = out[13];
+      const percent = out[14];
+      setIfIdle($("float-mass"), massKg);
+      $("float-volume-out").textContent = fixed(litres, 2) + " L";
+      $("float-mass-out").textContent = fmt(massKg) + " kg";
+      $("float-fluid-out").textContent = fmt(fluid) + " kg/m³";
+      lines($("float-formula"), [
+        "ρ = m / V = " + fmt(massKg) + " kg / " + fmt(vol) + " m³ = " + fmt(density) + " kg/m³",
+        "submerged fraction = ρ_object / ρ_fluid = " + fmt(density) + " / " + fmt(fluid) + " = " + fmt(ratio, 4),
+        "W = m g = " + fmt(massKg) + " kg × " + fmt(gravity, 6) + " m/s² = " + fmt(weight) + " N",
+        "F_b = ρ_fluid × V_displaced × g = " + fmt(fluid) + " × " + fmt(displaced) + " × " + fmt(gravity, 6) + " = " + fmt(buoyant) + " N",
+        "apparent weight = W − F_b = " + fmt(apparent) + " N"
+      ]);
+      const who = materialName();
+      const where = fluidName();
+      let story;
+      if (code === 1) {
+        story = who + " is less dense than " + where + " (" + fmt(density) + " against " + fmt(fluid) + " kg/m³), so it floats. " + fixed(percent, 1) + " percent of it is under the surface, the buoyant force matches the weight, and the apparent weight is zero.";
+      } else if (code === 3) {
+        story = who + " matches " + where + ". It is level in the tank: buoyancy equals weight all the way through, and it does not sit on the bottom.";
+      } else {
+        story = who + " is denser than " + where + " (" + fmt(density) + " against " + fmt(fluid) + " kg/m³), so it sinks. Buoyancy is " + fmt(buoyant) + " N, weight is " + fmt(weight) + " N, and a scale under the block would still read " + fmt(apparent) + " N.";
+      }
+      $("float-story").textContent = story;
+      $("float-caption").textContent = who + " in " + where + ". Down arrow: weight. Up arrow: buoyancy.";
+      paintChoices();
+      const color = state.material ? materials[state.material - 1].color : "#b9a48a";
+      const fluidColor = state.fluid ? fluids[state.fluid - 1].color : "#9bb7c4";
+      $("float-fluid").setAttribute("fill", fluidColor);
+      $("float-block-rect").setAttribute("fill", color);
+      const sideM = run(OP.MASSES, vol)[8];
+      const px = Math.max(28, (sideM / maxSide) * 136);
+      const x = 170 - px / 2;
+      const surface = 150;
+      const floor = 308;
+      let top;
+      if (code === 2) top = floor - px;
+      else top = surface - (1 - submerged) * px;
+      const place = (y) => {
+        $("float-block").setAttribute("transform", "translate(" + x.toFixed(2) + " " + y.toFixed(2) + ")");
+        $("float-block-rect").setAttribute("width", px);
+        $("float-block-rect").setAttribute("height", px);
+        const local = 150 - y;
+        const cut = $("float-cut");
+        if (local > 1 && local < px - 1) {
+          cut.setAttribute("visibility", "visible");
+          cut.setAttribute("y1", local);
+          cut.setAttribute("y2", local);
+          cut.setAttribute("x2", px);
+        } else {
+          cut.setAttribute("visibility", "hidden");
+        }
+      };
+      glide(floatAnim, top, 480, place);
+      const wLen = out[11] * 72;
+      const bLen = out[12] * 72;
+      $("float-weight").setAttribute("y2", 150 + wLen);
+      $("float-buoy").setAttribute("y2", 150 - bLen);
+      $("float-weight-label").setAttribute("y", 166 + wLen);
+      $("float-buoy-label").setAttribute("y", 142 - bLen);
+    }
+
+    function renderPack() {
+      const count = Number($("pack-count").value);
+      const each = run(OP.MAP, 2, Number($("pack-mass").value))[0];
+      const side = Number($("pack-side").value);
+      const out = run(OP.PACK, count, each, side);
+      $("pack-count-out").textContent = String(Math.round(out[5]));
+      $("pack-mass-out").textContent = fmt(out[6]) + " kg";
+      $("pack-side-out").textContent = fmt(out[7]) + " m";
+      lines($("pack-formula"), [
+        "total mass = N × m = " + fmt(out[1]) + " kg",
+        "V = side³ = " + fmt(out[2]) + " m³",
+        "ρ = total mass / V = " + fmt(out[1]) + " / " + fmt(out[2]) + " = " + fmt(out[0]) + " kg/m³",
+        "average spacing = side / N^(1/3) = " + fmt(out[3]) + " m",
+        "specific gravity against water = " + fmt(out[4])
+      ]);
+      let story;
+      if (state.packCause === "mass") {
+        story = "Each particle now has mass " + fmt(out[6]) + " kg. The gaps did not move: spacing is still " + fmt(out[3]) + " m. Density is " + fmt(out[0]) + " kg/m³ because density counts mass, not only how close the dots sit.";
+      } else if (state.packCause === "side") {
+        story = "The box side is " + fmt(out[7]) + " m, so the volume is " + fmt(out[2]) + " m³. The same particles now sit " + fmt(out[3]) + " m apart, and the density is " + fmt(out[0]) + " kg/m³. You changed the room, not the weight of each dot.";
+      } else {
+        story = "There are " + Math.round(out[5]) + " particles in a box " + fmt(out[7]) + " m on a side. Spacing is " + fmt(out[3]) + " m and density is " + fmt(out[0]) + " kg/m³. More particles in the same box means a tighter pack.";
+      }
+      $("pack-story").textContent = story;
+      const t = (side - 0.25) / 1.75;
+      const size = 78 + t * 170;
+      const box = { x: 30 + (250 - size) / 2, y: (300 - size) / 2, w: size, h: size };
+      const rect = $("pack-box");
+      rect.setAttribute("x", box.x);
+      rect.setAttribute("y", box.y);
+      rect.setAttribute("width", box.w);
+      rect.setAttribute("height", box.h);
+      const n = Math.round(out[5]);
+      const cols = Math.ceil(Math.sqrt(n));
+      const rows = Math.ceil(n / cols);
+      const g = $("pack-dots");
+      while (g.children.length < n) g.appendChild(document.createElementNS(SVGNS, "circle"));
+      while (g.children.length > n) g.removeChild(g.lastChild);
+      const shade = Math.round(214 - (Number($("pack-mass").value) / 1000) * 150);
+      const fill = "rgb(" + shade + "," + Math.max(0, shade - 10) + "," + Math.max(0, shade - 20) + ")";
+      for (let i = 0; i < n; i += 1) {
+        const c = i % cols;
+        const row = Math.floor(i / cols);
+        const inRow = row === rows - 1 ? n - row * cols : cols;
+        const gapX = box.w / cols;
+        const gapY = box.h / rows;
+        const offset = ((cols - inRow) * gapX) / 2;
+        const dot = g.children[i];
+        dot.setAttribute("cx", box.x + offset + (c + 0.5) * gapX);
+        dot.setAttribute("cy", box.y + (row + 0.5) * gapY);
+        dot.setAttribute("r", Math.max(1.6, Math.min(gapX, gapY) * 0.3));
+        dot.setAttribute("fill", fill);
+      }
+      const barH = 24 + (Number($("pack-mass").value) / 1000) * 180;
+      $("pack-bar").setAttribute("y", 248 - barH);
+      $("pack-bar").setAttribute("height", barH);
+      $("pack-bar").setAttribute("fill", fill);
+    }
+
+    function renderBalance() {
+      const volume = Number($("bal-volume").value);
+      const out = run(OP.BAL, state.left, state.right, volume);
+      const masses = run(OP.MASSES, volume);
+      const litres = run(OP.FLOAT, state.left, 0, volume, fluids[2].density)[13];
+      $("bal-volume-out").textContent = fixed(litres, 2) + " L";
+      lines($("bal-formula"), [
+        "m_left = ρ_left × V = " + fmt(out[4]) + " × " + fmt(volume) + " = " + fmt(out[0]) + " kg",
+        "m_right = ρ_right × V = " + fmt(out[5]) + " × " + fmt(volume) + " = " + fmt(out[1]) + " kg",
+        "tilt = (m_right − m_left) / (m_right + m_left) = " + fmt(out[2], 3),
+        "picture angle = " + fixed(out[3], 1) + "° (positive lowers the right-hand side)"
+      ]);
+      const leftName = materials[state.left - 1].name;
+      const rightName = materials[state.right - 1].name;
+      let story;
+      if (Math.abs(out[3]) < 0.05) {
+        story = "Both cubes are " + fixed(litres, 2) + " L of the same density, so the masses match and the beam stays level.";
+      } else {
+        const heavy = out[3] > 0 ? rightName : leftName;
+        story = "Both cubes are " + fixed(litres, 2) + " L. " + leftName + " is " + fmt(out[0]) + " kg and " + rightName + " is " + fmt(out[1]) + " kg, so " + heavy + " goes down. The size is the same. The mass is not.";
+      }
+      $("bal-story").textContent = story;
+      $("bal-left").value = String(state.left);
+      $("bal-right").value = String(state.right);
+      const side = out[6];
+      const s = Math.max(22, (side / maxSide) * 58);
+      const place = (deg) => {
+        const angle = deg * Math.PI / 180;
+        const leftX = 180 - Math.cos(angle) * 120;
+        const leftY = 92 - Math.sin(angle) * 120;
+        const rightX = 180 + Math.cos(angle) * 120;
+        const rightY = 92 + Math.sin(angle) * 120;
+        $("bal-beam").setAttribute("x1", leftX);
+        $("bal-beam").setAttribute("y1", leftY);
+        $("bal-beam").setAttribute("x2", rightX);
+        $("bal-beam").setAttribute("y2", rightY);
+        const lc = $("bal-left-cube");
+        const rc = $("bal-right-cube");
+        lc.setAttribute("x", leftX - s / 2);
+        lc.setAttribute("y", leftY - s);
+        lc.setAttribute("width", s);
+        lc.setAttribute("height", s);
+        lc.setAttribute("fill", materials[state.left - 1].color);
+        rc.setAttribute("x", rightX - s / 2);
+        rc.setAttribute("y", rightY - s);
+        rc.setAttribute("width", s);
+        rc.setAttribute("height", s);
+        rc.setAttribute("fill", materials[state.right - 1].color);
+        $("bal-left-label").setAttribute("x", leftX);
+        $("bal-left-label").setAttribute("y", leftY - s - 8);
+        $("bal-left-label").textContent = fmt(out[0]) + " kg";
+        $("bal-right-label").setAttribute("x", rightX);
+        $("bal-right-label").setAttribute("y", rightY - s - 8);
+        $("bal-right-label").textContent = fmt(out[1]) + " kg";
+      };
+      glide(tiltAnim, out[3], 420, place);
+      document.querySelectorAll("#bal-minis .mini").forEach((btn, index) => {
+        const i = index + 1;
+        btn.querySelector(".mini-mass").textContent = fmt(masses[index]) + " kg";
+        btn.dataset.side = i === state.left && i === state.right ? "both" : i === state.left ? "L" : i === state.right ? "R" : "";
+      });
+    }
+
+    function renderLadder() {
+      const logValue = Number($("ladder-pos").value);
+      const decades = Number($("ladder-zoom").value);
+      const view = run(OP.LADDER, logValue, decades);
+      const rungs = [];
+      for (let i = 1; i <= RUNG_META.length; i += 1) rungs.push(run(OP.RUNG, i));
+      $("ladder-pos-out").textContent = fmt(view[0]) + " kg/m³";
+      $("ladder-zoom-out").textContent = fixed(decades, 1);
+      const phrase = anchorPhrase(view[4], view[3]);
+      lines($("ladder-formula"), [
+        "teaspoon mass = ρ × 5 mL = " + fmt(view[2]) + " kg",
+        "That is " + phrase + ".",
+        "log₁₀ ρ = " + fixed(view[1], 2)
+      ]);
+      const nearest = Math.round(view[9]);
+      let placeName = RUNG_META[nearest - 1][0];
+      if (view[10] !== 1) {
+        let below = RUNG_META[0][0];
+        let above = RUNG_META[RUNG_META.length - 1][0];
+        rungs.forEach((rung, index) => {
+          if (rung[1] <= view[1] + 1e-6) below = RUNG_META[index][0];
+          if (rung[1] > view[1] + 1e-6 && above === RUNG_META[RUNG_META.length - 1][0]) {
+            above = RUNG_META[index][0];
+          }
+        });
+        placeName = "between " + below + " and " + above;
+      }
+      $("ladder-story").textContent = "You are at " + placeName + ", " + fmt(view[0]) + " kg/m³. A 5 mL teaspoon of this weighs " + fmt(view[2]) + " kg, " + phrase + ". The spoon did not grow. The density did the changing.";
+      $("ladder-window").textContent = "Window from log₁₀ ρ = " + fixed(view[6], 2) + " to " + fixed(view[7], 2) + ".";
+      $("ladder-marker").style.top = (8 + (1 - view[8]) * 84) + "%";
+      const placed = [];
+      document.querySelectorAll("#ladder-view .rung").forEach((btn, index) => {
+        const fraction = rungs[index][2];
+        const visible = fraction >= -0.02 && fraction <= 1.02;
+        btn.hidden = !visible;
+        const tick = document.querySelector('#ladder-view .tick[data-index="' + (index + 1) + '"]');
+        if (tick) {
+          tick.hidden = !visible;
+          tick.style.top = (8 + (1 - fraction) * 84) + "%";
+        }
+        btn.setAttribute("aria-current", index + 1 === nearest ? "true" : "false");
+        btn.querySelector(".rung-density").textContent = fmt(rungs[index][0]);
+        if (visible) placed.push({ btn, index, top: 8 + (1 - fraction) * 84 });
+      });
+      // Everyday rungs sit within a decade or two. Nudge their labels apart
+      // so the words can be read; the ticks stay on the true log positions.
+      placed.sort((a, b) => a.top - b.top);
+      const gap = 7.2;
+      for (let i = 1; i < placed.length; i += 1) {
+        if (placed[i].top < placed[i - 1].top + gap) placed[i].top = placed[i - 1].top + gap;
+      }
+      if (placed.length) {
+        const overflow = placed[placed.length - 1].top - 94;
+        if (overflow > 0) placed.forEach((item) => { item.top -= overflow; });
+      }
+      placed.forEach((item) => { item.btn.style.top = item.top + "%"; });
+      const selected = placed.find((item) => item.index + 1 === nearest);
+      if (selected) $("ladder-marker").style.top = selected.top + "%";
+    }
+
+    function renderEmpty() {
+      const zoom = Number($("empty-zoom").value);
+      const out = run(OP.EMPTY, zoom);
+      const stage = Math.round(out[10]);
+      const blend = out[11];
+      const names = ["Object", "Atoms", "Nucleus"];
+      $("empty-zoom-out").textContent = names[stage - 1];
+      lines($("empty-formula"), [
+        "linear ratio = r_proton / r_Bohr = " + fmt(out[2]),
+        "volume fraction = (r_proton / r_Bohr)³ = " + fmt(out[3]),
+        "ρ_nuclear / ρ_water = " + fmt(out[4]) + " / " + fmt(out[5]) + " = " + fmt(out[6]),
+        "Earth squeezed to nuclear density: radius " + fmt(out[8]) + " m, which is " + fmt(out[9]) + " times smaller than " + fmt(out[7]) + " m"
+      ]);
+      let story;
+      if (stage === 1) {
+        story = "From arm’s length the block looks solid. The nuclei that hold almost all of the mass are still far too small to see. Push the zoom toward the atoms.";
+      } else if (stage === 2) {
+        story = "These circles are Bohr atoms packed the way electron clouds touch in a solid. The proton is " + fmt(out[2]) + " of that radius, so on this picture it is smaller than a pixel. The volume ratio is " + fmt(out[3]) + ".";
+      } else {
+        story = "The dot is drawn " + fmt(out[13]) + " times larger than its true share of the atom, so you can see it. At true scale the proton’s volume is " + fmt(out[3]) + " of the Bohr atom, and the cloud would reach about " + fmt(out[14]) + " picture-widths away. The whole Earth, at this nuclear density, would be a sphere " + fmt(out[8]) + " m across.";
+      }
+      $("empty-story").textContent = story;
+      $("empty-caption").textContent = stage === 3 && out[13] > 2
+        ? "Magnified so the proton is visible. Not to scale."
+        : "The cloud is the Bohr radius. The mass is in the middle.";
+      $("empty-object").style.opacity = stage === 1 ? 1 : stage === 2 ? String(1 - blend) : 0;
+      $("empty-atoms").style.opacity = stage === 1 ? String(blend) : stage === 2 ? 1 : String(1 - blend);
+      $("empty-nucleus").style.opacity = stage === 3 ? 1 : stage === 2 ? String(blend * 0.35) : 0;
+      const radius = Math.max(0.4, out[12] * 320);
+      $("empty-dot").setAttribute("r", radius);
+      const cloud = $("empty-cloud");
+      if (out[14] < 1.15) {
+        cloud.setAttribute("visibility", "visible");
+        cloud.setAttribute("r", Math.min(140, out[14] * 320));
+      } else {
+        cloud.setAttribute("visibility", "hidden");
+      }
+      const atoms = $("empty-atoms");
+      const spread = stage === 1 ? blend : 1;
+      for (let i = 0; i < atoms.children.length; i += 1) {
+        const c = i % 5;
+        const r = Math.floor(i / 5);
+        const fx = 110 + c * 26;
+        const fy = 90 + r * 26;
+        const x = 160 + (fx - 160) * spread;
+        const y = 150 + (fy - 150) * spread;
+        atoms.children[i].setAttribute("cx", x);
+        atoms.children[i].setAttribute("cy", y);
+      }
+    }
+
+    function volumePhrase(mL, litres, m3) {
+      if (mL < 1000) return fixed(mL, mL < 10 ? 1 : 0) + " mL";
+      if (litres < 1000) return fixed(litres, litres < 10 ? 2 : 1) + " L";
+      return fmt(m3) + " m³";
+    }
+    function renderImagine() {
+      const out = run(OP.IMAGINE, state.area, state.dark);
+      $("imagine-area-out").textContent = fmt(out[13]) + " cm²";
+      $("imagine-volume-out").textContent = volumePhrase(out[11], out[12], out[10]);
+      lines($("imagine-formula"), [
+        "rate = flux × area = " + fmt(out[0]) + " /cm²/s × " + fmt(out[13]) + " cm² = " + fmt(out[1]) + " /s",
+        "chance ≈ column × σ = " + fmt(out[5]) + " /cm² × " + fmt(out[4]) + " cm² = " + fmt(out[2]),
+        "about 1 in " + fmt(out[3]) + " on this sketch",
+        "dark mass = ρ_dark × V = " + fmt(out[6]) + " kg/m³ × " + fmt(out[10]) + " m³ = " + fmt(out[7]) + " kg",
+        "that mass is about " + fmt(out[8]) + " proton masses, or " + fmt(out[9]) + " of a 1 mg grain of sand"
+      ]);
+      $("imagine-story").textContent = "Through " + fmt(out[13]) + " cm², about " + fmt(out[1]) + " solar neutrinos pass each second. Across the Earth, this rough model gives about 1 in " + fmt(out[3]) + " of them an interaction. In " + volumePhrase(out[11], out[12], out[10]) + " of seemingly empty space, the halo estimate puts about " + fmt(out[8]) + " proton masses, and you would not feel it.";
+      const t = Math.sqrt(Math.min(out[13], 3000) / 3000);
+      const w = 8 + t * 28;
+      const h = 8 + t * 36;
+      const rect = $("imagine-area-rect");
+      rect.setAttribute("width", w);
+      rect.setAttribute("height", h);
+      rect.setAttribute("x", 78 - w / 2);
+      rect.setAttribute("y", 94 - h / 2);
+    }
+
+    function renderAll() {
+      renderFloat();
+      renderPack();
+      renderBalance();
+      renderLadder();
+      renderEmpty();
+      renderImagine();
+    }
+
+    function buildControls() {
+      materials = MATERIAL_META.map((meta, index) => ({
+        name: meta[0],
+        note: meta[1],
+        color: meta[2],
+        density: run(OP.MAT, index + 1)[0]
+      }));
+      fluids = FLUID_META.map((meta, index) => ({
+        name: meta[0],
+        note: meta[1],
+        color: meta[2],
+        density: run(OP.FLU, index + 1)[0],
+        index: index + 1
+      }));
+      const matBox = $("material-buttons");
+      materials.forEach((item, index) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.index = String(index + 1);
+        btn.textContent = item.name + " · " + fmt(item.density);
+        btn.title = item.note;
+        matBox.appendChild(btn);
+      });
+      const fluBox = $("fluid-buttons");
+      fluids.forEach((item) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.dataset.index = String(item.index);
+        btn.textContent = item.name + " · " + fmt(item.density);
+        btn.title = item.note;
+        fluBox.appendChild(btn);
+      });
+      const left = $("bal-left");
+      const right = $("bal-right");
+      const minis = $("bal-minis");
+      materials.forEach((item, index) => {
+        const optL = document.createElement("option");
+        optL.value = String(index + 1);
+        optL.textContent = item.name;
+        left.appendChild(optL);
+        const optR = document.createElement("option");
+        optR.value = String(index + 1);
+        optR.textContent = item.name;
+        right.appendChild(optR);
+        const mini = document.createElement("button");
+        mini.type = "button";
+        mini.className = "mini";
+        mini.dataset.index = String(index + 1);
+        mini.innerHTML = '<span class="swatch"></span><span>' + item.name + '</span><small class="mini-mass">—</small>';
+        mini.querySelector(".swatch").style.background = item.color;
+        minis.appendChild(mini);
+      });
+      const ladder = $("ladder-view");
+      RUNG_META.forEach((meta, index) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.className = "rung";
+        btn.dataset.index = String(index + 1);
+        btn.innerHTML = "<b>" + meta[0] + "</b><span class=\"rung-density\"></span>";
+        btn.title = meta[1];
+        const tick = document.createElement("div");
+        tick.className = "tick";
+        tick.dataset.index = String(index + 1);
+        ladder.appendChild(tick);
+        ladder.appendChild(btn);
+      });
+      const atoms = $("empty-atoms");
+      for (let i = 0; i < 25; i += 1) {
+        const c = document.createElementNS(SVGNS, "circle");
+        c.setAttribute("r", "9");
+        c.setAttribute("fill", "#d7eef5");
+        c.setAttribute("stroke", "#1c2430");
+        c.setAttribute("stroke-width", "1.4");
+        atoms.appendChild(c);
+      }
+      maxSide = run(OP.MASSES, 0.003)[8];
+      state.fluidDensity = fluids[2].density;
+      setIfIdle($("float-fluid"), run(OP.UNMAP, 1, state.fluidDensity)[0]);
+      setIfIdle($("pack-mass"), run(OP.UNMAP, 2, 0.2)[0]);
+      setIfIdle($("imagine-area"), run(OP.UNMAP, 4, state.area)[0]);
+      setIfIdle($("imagine-volume"), run(OP.UNMAP, 3, state.dark)[0]);
+      run(OP.LADDER, 3, 40);
+      const waterLog = run(OP.RUNG, 3)[1];
+      const low = run(OP.RUNG, 1)[1];
+      const high = run(OP.RUNG, 8)[1];
+      $("ladder-pos").min = String(low);
+      $("ladder-pos").max = String(high);
+      $("ladder-pos").value = String(waterLog);
+    }
+
+    function bind() {
+      document.querySelectorAll(".tabs button").forEach((btn) => {
+        btn.addEventListener("click", () => show(btn.id.replace("tab-", "")));
+      });
+      $("material-buttons").addEventListener("click", (event) => {
+        const btn = event.target.closest("button");
+        if (!btn) return;
+        state.material = Number(btn.dataset.index);
+        renderFloat();
+      });
+      $("fluid-buttons").addEventListener("click", (event) => {
+        const btn = event.target.closest("button");
+        if (!btn) return;
+        state.fluid = Number(btn.dataset.index);
+        state.fluidDensity = fluids[state.fluid - 1].density;
+        setIfIdle($("float-fluid"), run(OP.UNMAP, 1, state.fluidDensity)[0]);
+        renderFloat();
+      });
+      $("tries").addEventListener("click", (event) => {
+        const btn = event.target.closest("button");
+        if (!btn) return;
+        state.material = Number(btn.dataset.mat);
+        state.fluid = Number(btn.dataset.fluid);
+        state.fluidDensity = fluids[state.fluid - 1].density;
+        setIfIdle($("float-fluid"), run(OP.UNMAP, 1, state.fluidDensity)[0]);
+        renderFloat();
+      });
+      $("float-volume").addEventListener("input", renderFloat);
+      $("float-mass").addEventListener("input", () => {
+        state.material = 0;
+        renderFloat();
+      });
+      $("float-fluid").addEventListener("input", () => {
+        const mapped = run(OP.MAP, 1, Number($("float-fluid").value))[0];
+        const hit = fluids.find((item) => Math.abs(item.density - mapped) < 0.6);
+        if (hit) {
+          state.fluid = hit.index;
+          state.fluidDensity = hit.density;
+        } else {
+          state.fluid = 0;
+          state.fluidDensity = mapped;
+        }
+        renderFloat();
+      });
+      $("pack-count").addEventListener("input", () => { state.packCause = "count"; renderPack(); });
+      $("pack-mass").addEventListener("input", () => { state.packCause = "mass"; renderPack(); });
+      $("pack-side").addEventListener("input", () => { state.packCause = "side"; renderPack(); });
+      $("bal-left").addEventListener("change", () => { state.left = Number($("bal-left").value); renderBalance(); });
+      $("bal-right").addEventListener("change", () => { state.right = Number($("bal-right").value); renderBalance(); });
+      $("bal-volume").addEventListener("input", renderBalance);
+      $("bal-swap").addEventListener("click", () => {
+        const hold = state.left;
+        state.left = state.right;
+        state.right = hold;
+        renderBalance();
+      });
+      $("bal-minis").addEventListener("click", (event) => {
+        const btn = event.target.closest("button");
+        if (!btn) return;
+        state.right = Number(btn.dataset.index);
+        renderBalance();
+      });
+      $("ladder-pos").addEventListener("input", renderLadder);
+      $("ladder-zoom").addEventListener("input", renderLadder);
+      $("ladder-view").addEventListener("click", (event) => {
+        const btn = event.target.closest(".rung");
+        if (!btn) return;
+        const log = run(OP.RUNG, Number(btn.dataset.index))[1];
+        $("ladder-pos").value = String(log);
+        renderLadder();
+      });
+      $("empty-zoom").addEventListener("input", renderEmpty);
+      $("imagine-area").addEventListener("input", () => {
+        state.area = run(OP.MAP, 4, Number($("imagine-area").value))[0];
+        renderImagine();
+      });
+      $("imagine-volume").addEventListener("input", () => {
+        state.dark = run(OP.MAP, 3, Number($("imagine-volume").value))[0];
+        renderImagine();
+      });
+      $("area-chips").addEventListener("click", (event) => {
+        const btn = event.target.closest("button");
+        if (!btn) return;
+        state.area = Number(btn.dataset.area);
+        setIfIdle($("imagine-area"), run(OP.UNMAP, 4, state.area)[0]);
+        renderImagine();
+      });
+      $("dark-chips").addEventListener("click", (event) => {
+        const btn = event.target.closest("button");
+        if (!btn) return;
+        state.dark = Number(btn.dataset.vol);
+        setIfIdle($("imagine-volume"), run(OP.UNMAP, 3, state.dark)[0]);
+        renderImagine();
+      });
+      window.addEventListener("hashchange", () => {
+        const id = location.hash.replace("#", "");
+        if (PANELS.includes(id)) show(id);
+      });
+    }
+
+    async function boot() {
+      const response = await fetch("density.wasm");
+      if (!response.ok) throw new Error("Could not fetch density.wasm (" + response.status + ")");
+      const bytes = await response.arrayBuffer();
+      const holder = { instance: null };
+      const { instance } = await WebAssembly.instantiate(bytes, {
+        env: {
+          __gnat_put_exception() { throw new Error("Ada runtime reported an exception"); },
+          __gnat_grow(pages) {
+            const memory = holder.instance && holder.instance.exports.memory;
+            if (!memory) return -1;
+            try { return memory.grow(pages); } catch (err) { return -1; }
+          }
+        }
+      });
+      holder.instance = instance;
+      instance.exports.adainit();
+      ex = instance.exports;
+      gravity = run(OP.COUNTS)[4];
+      buildControls();
+      bind();
+      const hash = location.hash.replace("#", "");
+      show(PANELS.includes(hash) ? hash : "float");
+      renderAll();
+      $("status").textContent = "Ada module loaded. Every number in the formulas comes from that module.";
+    }
+
+    boot().catch((err) => {
+      $("status").textContent = "The Ada module did not start. " + err.message;
+      $("float-story").textContent = "The Ada module did not start, so this page will not invent the numbers.";
+    });
+  </script>
+</body>
+</html>
